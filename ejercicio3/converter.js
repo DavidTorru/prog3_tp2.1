@@ -6,11 +6,59 @@ class Currency {
 }
 
 class CurrencyConverter {
-    constructor() {}
+    constructor(apiUrl) {
+        this.apiUrl = apiUrl;
+        this.currencies = [];
+    }
 
-    getCurrencies(apiUrl) {}
+    async getCurrencies(apiUrl) {
+        try {
+            const response = await fetch(`${this.apiUrl}/currencies`);
+            const data = await response.json();
+            this.currencies = Object.entries(data).map(
+                ([code, name]) => new Currency(code, name)
+            );
+        } catch(error) {
+            console.error("Fallo en la conversion de moneda", error);
+        }
+    }
 
-    convertCurrency(amount, fromCurrency, toCurrency) {}
+    async convertCurrency(amount, fromCurrency, toCurrency) {
+        if (fromCurrency.code === toCurrency.code) {
+            return amount;
+        }
+
+        try {
+            const response = await fetch (`${this.apiUrl}/latest?amount=${amount}&from=${fromCurrency.code}&to==${toCurrency.code}`);
+            const data = await response.json();
+            return data.rates[toCurrency.code];
+        } catch(error) {
+            console.error("Fallo en la conversion de moneda", error);
+            return null;
+        }
+    }
+
+    async getExchangeRateDifference(fromCurrency, toCurrency) {
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        try {
+            const [todayRR, yesterdayRR] = await Promise.all([
+                fetch(`${this.apiUrl}/${today}?from=${fromCurrency.code}&to=${toCurrency.code}`),
+                fetch(`${this.apiUrl}/${yesterday}?from=${fromCurrency.code}&to=${toCurrency.code}`)
+            ]);
+            const todayRateResponse = await todayRR.json();
+            const yesterdayRateResponse = await yesterdayRR.json();
+            
+            const todayRate = todayRateResponse.rates[toCurrency.code];
+            const yesterdayRate = yesterdayRateResponse.rates[toCurrency.code];
+
+            return todayRate = yesterdayRate
+
+        } catch(error) {
+            console.error("Fallo en la obtención de la tasa de cambio", error);
+            return null;
+        }
+    }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
